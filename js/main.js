@@ -8,7 +8,6 @@ let app = new Vue({
     altText: "A pair of socks",
     link: "https://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords=socks",
     // inventory: 0,
-    onSale: true,
     details: ["80% cotton", "20% polyester", "Gender-neutral"],
     variants: [
       {
@@ -16,12 +15,14 @@ let app = new Vue({
         variantColor: "green",
         variantImage: "./assets/vmSocks-green-onWhite.jpg",
         variantQuantity: 9,
+        onSale: true,
       },
       {
         variantId: 2235,
         variantColor: "blue",
         variantImage: "./assets/vmSocks-blue-onWhite.jpg",
         variantQuantity: 0,
+        onSale: false,
       },
     ],
 
@@ -54,10 +55,15 @@ let app = new Vue({
       return this.variants[this.selectedVariant].variantQuantity;
     },
     sale() {
-      if (this.onSale) {
-        return this.brand + " " + this.product + " are on sale!";
-      } else {
-        return this.brand + " " + this.product + " are not on sale.";
+      if (this.variants[this.selectedVariant].onSale) {
+        return (
+          this.brand +
+          " " +
+          this.product +
+          " " +
+          this.variants[this.selectedVariant].variantColor +
+          " is on sale!"
+        );
       }
     },
   },
