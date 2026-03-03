@@ -1,10 +1,134 @@
+let eventBus = new Vue();
+
+Vue.component("product", {
+  template: `
+    <div class="product">
+	    <div class="product-image">
+            <img :src="image" :alt="altText"/>
+        </div>
+
+        <div class="product-info">
+            <h1>{{ title }}</h1>
+            <span v-show="onSale">{{ sale }}</span>
+            <p v-if="inStock > 10">In stock</p>
+            <p v-else-if="inStock <= 10 && inStock > 0">Almost sold out!</p>
+            <p v-else :class="{ outStock: !inStock }">Out of Stock</p>
+            <div
+                    class="color-box"
+                    v-for="(variant, index) in variants"
+                    :key="variant.variantId"
+                    :style="{ backgroundColor:variant.variantColor }"
+                    @mouseover="updateProduct(index)"
+            ></div>
+            <ul>
+                <li v-for="size in sizes">{{ size }}</li>
+            </ul>
+            <p>{{ description }}</p>
+            <button
+                    v-on:click="addToCart"
+                    :disabled="!inStock"
+                    :class="{ disabledButton: !inStock }"
+            >
+                Add to cart
+            </button>
+            <button @click="removeFromCart">Remove from cart</button>
+            <a :href="link">More products like this</a>
+        </div>
+        <product-tabs :reviews="reviews" :shipping="shipping" :details="details"></product-tabs>
+    </div>
+    `,
+  props: {
+    premium: {
+      type: Boolean,
+      required: true,
+    },
+  },
+  data() {
+    return {
+      product: "Socks",
+      brand: "Vue Mastery",
+      description: "A pair of warm, fuzzy socks",
+      selectedVariant: 0,
+      altText: "A pair of socks",
+      link: "https://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords=socks",
+      onSale: true,
+      details: ["80% cotton", "20% polyester", "Gender-neutral"],
+      variants: [
+        {
+          variantId: 2234,
+          variantColor: "green",
+          variantImage: "./assets/vmSocks-green-onWhite.jpg",
+          variantQuantity: 10,
+        },
+        {
+          variantId: 2235,
+          variantColor: "blue",
+          variantImage: "./assets/vmSocks-blue-onWhite.jpg",
+          variantQuantity: 0,
+        },
+      ],
+      sizes: ["S", "M", "L", "XL", "XXL", "XXXL"],
+      reviews: [],
+    };
+  },
+  methods: {
+    addToCart() {
+      this.$emit("add-to-cart", this.variants[this.selectedVariant].variantId);
+    },
+    removeFromCart() {
+      this.$emit(
+        "remove-from-cart",
+        this.variants[this.selectedVariant].variantId,
+      );
+    },
+    updateProduct(index) {
+      this.selectedVariant = index;
+    },
+  },
+  mounted() {
+    eventBus.$on("review-submitted", (productReview) => {
+      this.reviews.push(productReview);
+    });
+  },
+  computed: {
+    title() {
+      return this.brand + " " + this.product;
+    },
+    image() {
+      return this.variants[this.selectedVariant].variantImage;
+    },
+    inStock() {
+      return this.variants[this.selectedVariant].variantQuantity;
+    },
+    sale() {
+      if (this.onSale) {
+        return this.brand + " " + this.product + " is on sale";
+      } else {
+        return this.brand + " " + this.product + " is not on sale :(";
+      }
+    },
+    shipping() {
+      if (this.premium) {
+        return "Free";
+      } else {
+        return 2.99;
+      }
+    },
+  },
+});
+
 Vue.component("product-details", {
-  props: ["details"],
   template: `
     <ul>
-      <li v-for="detail in details">{{ detail }}</li>
+        <li v-for="detail in details">{{ detail }}</li>
     </ul>
-  `,
+    `,
+  props: {
+    details: {
+      type: Array,
+      required: true,
+    },
+  },
 });
 
 Vue.component("product-review", {
@@ -89,140 +213,55 @@ Vue.component("product-review", {
   },
 });
 
-Vue.component("product", {
+Vue.component("product-tabs", {
   template: `
-    <div class="product">
-      <div class="product-image">
-        <img :src="image" :alt="altText" />
-      </div>
-      <div class="product-info">
-        <h1>{{ title }}</h1>
-        <p>{{ description }}</p>
-        <p v-if="inStock >= 10">In stock</p>
-        <p v-else-if="inStock > 0 && inStock < 10">Almost sold out</p>
-        <p v-else :class="{ outStock: !inStock }">Out of stock</p>
-        <span>{{ sale }}</span>
-       <p>Shipping: {{ shipping }}</p>
-        <product-details :details="details"></product-details>
-        <ul>
-          <li v-for="size in sizes">{{ size }}</li>
-        </ul>
-        <div
-          class="color-box"
-          v-for="(variant, index) in variants"
-          :key="variant.variantId"
-          :style="{ backgroundColor: variant.variantColor }"
-          @mouseover="updateProduct(index)"
-        ></div>
-        <button
-          v-on:click="addToCart"
-          :disabled="!inStock"
-          :class="{ disabledButton: !inStock }"
-        >
-          Add to cart
-        </button>
-        <button v-on:click="removeFromCart">Remove from cart</button>
-        <a :href="link">More products like this</a>
-      </div>
         <div>
-          <h2>Reviews</h2>
-          <p v-if="!reviews.length">There are no reviews yet.</p>
-          <ul>
-            <li v-for="review in reviews">
-              <p>{{ review.name }}</p>
-              <p>Rating: {{ review.rating }}</p>
-              <p>{{ review.review }}</p>
-            </li>
-          </ul>
+            <ul>
+                <span class="tab"
+                    :class="{ activeTab: selectedTab === tab }"
+                    v-for="(tab, index) in tabs"
+                    @click="selectedTab = tab"
+                >{{ tab }}</span>
+            </ul>
+            <div v-show="selectedTab === 'Reviews'">
+                <p v-if="!reviews.length">There are no reviews yet.</p>
+                <ul>
+                    <li v-for="review in reviews">
+                    <p>{{ review.name }}</p>
+                    <p>Rating: {{ review.rating }}</p>
+                    <p>{{ review.review }}</p>
+                    </li>
+                </ul>
+            </div>
+            <div v-show="selectedTab === 'Make a Review'">
+                <product-review></product-review>
+            </div>
+            <div v-show="selectedTab === 'Shipping'">
+                <p>Shipping Cost: {{ shipping }}</p>
+            </div>
+            <div v-show="selectedTab === 'Details'">
+                <product-details :details="details"></product-details>
+            </div>
         </div>
-        <product-review @review-submitted="addReview"></product-review>
-    </div>
-  `,
+    `,
   props: {
-    premium: {
-      type: Boolean,
+    reviews: {
+      type: Array,
+      required: false,
+    },
+    shipping: {
+      required: true,
+    },
+    details: {
+      type: Array,
       required: true,
     },
   },
-
   data() {
     return {
-      product: "Socks",
-      brand: "Vue Mastery",
-      description: "A pair of warm, fuzzy socks",
-      reviews: [],
-      selectedVariant: 0,
-      altText: "A pair of socks",
-      link: "https://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords=socks",
-      details: ["80% cotton", "20% polyester", "Gender-neutral"],
-      variants: [
-        {
-          variantId: 2234,
-          variantColor: "green",
-          variantImage: "./assets/vmSocks-green-onWhite.jpg",
-          variantQuantity: 9,
-          onSale: true,
-        },
-        {
-          variantId: 2235,
-          variantColor: "blue",
-          variantImage: "./assets/vmSocks-blue-onWhite.jpg",
-          variantQuantity: 0,
-          onSale: false,
-        },
-      ],
-      sizes: ["S", "M", "L", "XL", "XXL", "XXXL"],
+      tabs: ["Reviews", "Make a Review", "Shipping", "Details"],
+      selectedTab: "Reviews",
     };
-  },
-  methods: {
-    addToCart() {
-      this.$emit("add-to-cart", this.variants[this.selectedVariant].variantId);
-    },
-
-    updateProduct(index) {
-      this.selectedVariant = index;
-      console.log(index);
-    },
-    removeFromCart() {
-      this.$emit(
-        "remove-from-cart",
-        this.variants[this.selectedVariant].variantId,
-      );
-    },
-    addReview(productReview) {
-      this.reviews.push(productReview);
-    },
-  },
-  computed: {
-    title() {
-      return this.brand + " " + this.product;
-    },
-    image() {
-      return this.variants[this.selectedVariant].variantImage;
-    },
-    inStock() {
-      return this.variants[this.selectedVariant].variantQuantity;
-    },
-    sale() {
-      if (this.variants[this.selectedVariant].onSale) {
-        return (
-          this.brand +
-          " " +
-          this.product +
-          " " +
-          this.variants[this.selectedVariant].variantColor +
-          " is on sale!"
-        );
-      }
-      return "";
-    },
-    shipping() {
-      if (this.premium) {
-        return "Free";
-      } else {
-        return 2.99;
-      }
-    },
   },
 });
 
