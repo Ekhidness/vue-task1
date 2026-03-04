@@ -84,10 +84,23 @@ Vue.component("product", {
     updateProduct(index) {
       this.selectedVariant = index;
     },
+    saveReviews() {
+      localStorage.setItem("product-reviews", JSON.stringify(this.reviews));
+    },
+
+    getRewiews() {
+      localStorage.getItem("product-reviews");
+    },
   },
   mounted() {
+    const savedReviews = localStorage.getItem("product-reviews");
+    if (savedReviews) {
+      this.reviews = JSON.parse(savedReviews);
+    }
+
     eventBus.$on("review-submitted", (productReview) => {
       this.reviews.push(productReview);
+      this.saveReviews();
     });
   },
   computed: {
